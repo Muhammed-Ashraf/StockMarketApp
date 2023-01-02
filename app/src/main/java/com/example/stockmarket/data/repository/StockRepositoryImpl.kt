@@ -1,9 +1,11 @@
 package com.example.stockmarket.data.repository
 
+import com.example.stockmarket.data.csv.CSVParser
 import com.example.stockmarket.data.local.StockDatabase
+import com.example.stockmarket.data.mapper.toCompanyListing
+import com.example.stockmarket.data.mapper.toCompanyListingEntity
 import com.example.stockmarket.data.remote.StockApi
 import com.example.stockmarket.domain.model.CompanyListing
-import com.example.stockmarket.data.mapper.toCompanyListing
 import com.example.stockmarket.domain.repository.StockRepository
 import com.example.stockmarket.util.Resource
 import kotlinx.coroutines.flow.Flow
@@ -16,7 +18,8 @@ import javax.inject.Singleton
 @Singleton
 class StockRepositoryImpl @Inject constructor(
     val api: StockApi,
-    val db: StockDatabase
+    val db: StockDatabase,
+    val companyListingsParser: CSVParser<CompanyListing>
 ) : StockRepository {
 
     private val dao = db.dao
@@ -40,12 +43,28 @@ class StockRepositoryImpl @Inject constructor(
             }
             val remoteListings = try {
                 val response = api.getListings()
+                companyListingsParser.parse(response.byteStream()) // solid principle - only one task per function
             } catch (e: IOException) {
                 e.printStackTrace()
                 emit(Resource.Error("Couldn't load data"))
+                null
             } catch (e: HttpException) {
                 e.printStackTrace()
                 emit(Resource.Error("Couldn't load data"))
+                null
+            }
+
+            remoteListings?.let { listings ->
+                dao.clearCompanyListings()
+                dao.insertCompanyListings(
+                    listings.map { it.toCompanyListingEntity() }
+                )
+                emit(Resource.Success(
+                    data = dao
+                        .searchCompanyListing("")
+                        .map { it.toCompanyListing() }
+                )) //solid principle - single source of data
+                emit(Resource.Loading(false))
             }
         }
     }
