@@ -42,3 +42,4 @@ fun StockMarketTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Compo
         content = content
     )
 }
+

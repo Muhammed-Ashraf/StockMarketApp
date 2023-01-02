@@ -1,4 +1,4 @@
-package com.plcoding.stockmarketapp.data.remote.dto
+package com.example.stockmarket.data.remote.dto
 
 data class IntradayInfoDto(
     val timestamp: String,
